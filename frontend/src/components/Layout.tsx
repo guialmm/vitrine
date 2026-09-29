@@ -7,14 +7,14 @@ import { buttonClass } from "./ui";
 
 function Logo() {
   return (
-    <Link to="/" className="font-display text-2xl font-semibold tracking-tight">
-      vitrine<span className="text-accent">.</span>
+    <Link to="/" className="text-xl font-extrabold tracking-[-0.04em]">
+      vitrine
     </Link>
   );
 }
 
 const navLink = ({ isActive }: { isActive: boolean }) =>
-  `text-sm transition ${isActive ? "text-text" : "text-text-dim hover:text-text"}`;
+  `text-sm font-medium transition ${isActive ? "text-text underline underline-offset-8" : "text-text-dim hover:text-text"}`;
 
 function AccountMenu() {
   const { user, logout } = useAuth();
@@ -32,15 +32,15 @@ function AccountMenu() {
         onClick={() => setOpen((o) => !o)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-full border border-border-strong py-1 pl-1 pr-3 text-sm hover:border-accent"
+        className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm hover:bg-surface-hover"
       >
-        <span className="grid size-7 place-items-center rounded-full bg-accent-soft font-semibold text-accent">
+        <span className="grid size-7 place-items-center rounded-full bg-ink text-xs font-semibold text-bg">
           {user.full_name[0]?.toUpperCase()}
         </span>
         <span className="hidden sm:inline">{user.full_name.split(" ")[0]}</span>
       </button>
       {open && (
-        <div className="card shadow-tinted absolute right-0 mt-2 w-52 overflow-hidden py-1 text-sm">
+        <div className="card absolute right-0 mt-2 w-52 overflow-hidden py-1 text-sm shadow-lg shadow-black/5">
           <p className="truncate px-4 py-2 text-xs text-text-muted">{user.email}</p>
           <Link to="/pedidos" className="block px-4 py-2 hover:bg-surface-hover">
             Meus pedidos
@@ -64,7 +64,7 @@ function VerifyBanner() {
   const [sent, setSent] = useState(false);
   if (!user || user.is_verified) return null;
   return (
-    <div className="relative z-10 border-b border-accent/20 bg-accent-soft px-4 py-2 text-center text-sm text-accent-strong">
+    <div className="border-b border-border bg-accent-soft px-4 py-2 text-center text-sm text-accent">
       Confirme seu e-mail para poder comprar.{" "}
       {sent ? (
         <span className="text-text-dim">Link reenviado — confira sua caixa de entrada.</span>
@@ -82,9 +82,11 @@ function VerifyBanner() {
 
 export function Layout({ cartSlot }: { cartSlot?: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <div className="bg-decor" aria-hidden />
-      <header className="glass-nav sticky top-0 z-30">
+    <div className="flex min-h-screen flex-col">
+      <p className="bg-ink px-4 py-2 text-center text-xs text-bg/80">
+        Torra às segundas · envio em até 48 h úteis para todo o Brasil
+      </p>
+      <header className="sticky top-0 z-30 border-b border-border bg-bg/95 backdrop-blur-sm">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
           <div className="flex items-center gap-8">
             <Logo />
@@ -99,15 +101,26 @@ export function Layout({ cartSlot }: { cartSlot?: React.ReactNode }) {
         </nav>
       </header>
       <VerifyBanner />
-      <main className="relative z-10 flex-1">
+      <main className="flex-1">
         <Outlet />
       </main>
-      <footer className="relative z-10 border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-text-muted sm:flex-row sm:justify-between sm:px-6">
-          <p>
-            <span className="font-display text-text-dim">vitrine.</span> — cafés especiais brasileiros. Projeto de portfólio.
-          </p>
-          <p className="font-mono text-xs">FastAPI · React · Stripe · Postgres</p>
+      <footer className="mt-24 border-t border-border">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 text-sm sm:grid-cols-3 sm:px-6">
+          <div>
+            <p className="text-lg font-extrabold tracking-[-0.04em]">vitrine</p>
+            <p className="mt-2 max-w-xs text-text-dim">
+              Cafés especiais de pequenos produtores brasileiros, torrados em lotes pequenos.
+            </p>
+          </div>
+          <div className="text-text-dim">
+            <p className="font-semibold text-text">Loja</p>
+            <Link to="/cafes" className="mt-2 block hover:text-text">Todos os cafés</Link>
+            <Link to="/cafes?category=microlotes" className="mt-1 block hover:text-text">Microlotes</Link>
+          </div>
+          <div className="text-text-muted">
+            <p>Projeto de portfólio — loja fictícia, pagamentos em modo de teste.</p>
+            <p className="mt-2">Fotos: Pexels.</p>
+          </div>
         </div>
       </footer>
     </div>

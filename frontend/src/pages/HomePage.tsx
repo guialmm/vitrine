@@ -1,85 +1,87 @@
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { Link } from "react-router";
 
-import { CoffeeBag } from "../components/CoffeeBag";
-import { Eyebrow, buttonClass } from "../components/ui";
+import { ProductCard } from "../components/ProductCard";
+import { ProductPhoto } from "../components/ProductPhoto";
+import { buttonClass } from "../components/ui";
 import { api } from "../lib/api";
 import type { Page, Product } from "../lib/types";
 
-const FEATURES = [
-  ["Torra sob demanda", "Torramos na semana do envio. Nada de café parado em prateleira."],
-  ["Rastreável", "Cada pacote traz a fazenda, a altitude e as notas sensoriais."],
-  ["Pagamento seguro", "Checkout pelo Stripe — seus dados de cartão nunca passam pela loja."],
-];
-
 export function HomePage() {
   const { data } = useQuery({
-    queryKey: ["products", "featured"],
-    queryFn: () => api<Page<Product>>("/products", { params: { sort: "price_desc", page_size: 24, in_stock: true } }),
+    queryKey: ["products", { sort: "newest", page_size: 24 }],
+    queryFn: () => api<Page<Product>>("/products", { params: { page_size: 24 } }),
   });
-  // One coffee per roast (light, medium, dark) so the hero shows the colour range.
-  const featured = ["clara", "media", "escura"]
-    .map((roast) => data?.items.find((p) => p.roast === roast))
-    .filter((p): p is Product => p !== undefined);
+  const products = data?.items ?? [];
+  const hero = products.find((p) => p.slug === "catuai-amarelo") ?? products[0];
+  const inStock = products.filter((p) => p.stock > 0);
+  const aboutProduct = products.find((p) => p.slug === "geisha-chapada") ?? products[1];
 
   return (
     <>
-      <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-16 sm:px-6 md:grid-cols-[1.1fr_1fr] md:pt-24">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-          <Eyebrow>Cafés especiais · safra 2026</Eyebrow>
-          <h1 className="mt-5 font-display text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-            Do pé de café
-            <br />
-            <span className="italic text-accent">direto pra sua xícara.</span>
+      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pt-10 sm:px-6 md:grid-cols-2 md:gap-14 md:pt-16">
+        <div>
+          <h1 className="text-4xl font-extrabold leading-[1.05] tracking-[-0.03em] sm:text-5xl">
+            Café especial brasileiro, torrado toda semana.
           </h1>
-          <p className="mt-6 max-w-md text-lg text-text-dim">
-            Microlotes de fazendas brasileiras, com origem e notas sensoriais em cada pacote.
+          <p className="mt-5 max-w-md text-lg text-text-dim">
+            Compramos direto de pequenos produtores de Minas, São Paulo, Bahia e Espírito Santo. Cada pacote
+            diz de onde veio o grão e o que esperar na xícara.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link to="/cafes" className={buttonClass("primary", "px-6 py-3 text-base")}>
-              Ver os cafés
+            <Link to="/cafes" className={buttonClass("primary", "px-6 py-3")}>
+              Comprar cafés
             </Link>
-            <Link to="/cafes?category=microlotes" className={buttonClass("outline", "px-6 py-3 text-base")}>
-              Microlotes
+            <Link to="/cafes?category=microlotes" className={buttonClass("outline", "px-6 py-3")}>
+              Ver microlotes
             </Link>
           </div>
-        </motion.div>
-
-        <div className="relative flex h-72 min-w-0 items-end justify-center sm:h-96">
-          <div className="absolute inset-x-8 bottom-4 h-40 rounded-full bg-accent-soft blur-3xl" aria-hidden />
-          {featured.map((p, i) => (
-            <motion.div
-              key={p.id}
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: i === 1 ? -24 : 0 }}
-              transition={{ delay: 0.2 + i * 0.12, type: "spring", stiffness: 90, damping: 14 }}
-              whileHover={{ y: (i === 1 ? -24 : 0) - 10 }}
-              className={`relative -mx-[3%] ${i === 1 ? "z-10 w-[38%]" : "w-[32%]"} max-w-56`}
-            >
-              <Link to={`/cafes/${p.slug}`} aria-label={p.name}>
-                <CoffeeBag slug={p.slug} name={p.name} origin={p.origin} roast={p.roast} className="w-full drop-shadow-2xl" />
-              </Link>
-            </motion.div>
-          ))}
+        </div>
+        <div className="overflow-hidden rounded-md">
+          {hero ? (
+            <ProductPhoto product={hero} kind="table" fit="natural" eager />
+          ) : (
+            <div className="aspect-[3/2] animate-pulse bg-bg-elev-2" />
+          )}
         </div>
       </section>
 
-      <section className="border-y border-border bg-bg-elev/60">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
-          {FEATURES.map(([title, text], i) => (
-            <motion.div
-              key={title}
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <p className="font-mono text-xs text-accent">0{i + 1}</p>
-              <h3 className="mt-2 font-display text-xl font-semibold">{title}</h3>
-              <p className="mt-2 text-sm text-text-dim">{text}</p>
-            </motion.div>
+      <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6">
+        <div className="flex items-end justify-between gap-4 border-b border-border pb-4">
+          <h2 className="text-2xl font-extrabold tracking-tight">Cafés da semana</h2>
+          <Link to="/cafes" className="text-sm font-medium text-accent hover:underline">
+            Ver todos
+          </Link>
+        </div>
+        <div className="mt-8 grid grid-cols-2 gap-x-5 gap-y-10 lg:grid-cols-4">
+          {inStock.slice(0, 4).map((p) => (
+            <ProductCard key={p.id} product={p} />
           ))}
+          {!data &&
+            Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="aspect-[4/5] animate-pulse rounded-md bg-bg-elev-2" />
+            ))}
+        </div>
+      </section>
+
+      <section className="mx-auto mt-24 grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-[2fr_3fr] md:gap-16">
+        <div className="mx-auto w-full max-w-sm overflow-hidden rounded-md">
+          {aboutProduct && <ProductPhoto product={aboutProduct} kind="hand" fit="natural" />}
+        </div>
+        <div>
+          <h2 className="text-3xl font-extrabold tracking-tight">Como a gente trabalha</h2>
+          <dl className="mt-8 space-y-6">
+            {[
+              ["Lotes pequenos", "Torramos às segundas só o que foi vendido na semana. O café chega com poucos dias de torra."],
+              ["Origem no rótulo", "Região, variedade, torra e notas sensoriais em todo pacote — sem blend misterioso."],
+              ["Pagamento pelo Stripe", "O cartão é digitado na página do Stripe; a loja nunca vê nem guarda esses dados."],
+            ].map(([title, text]) => (
+              <div key={title} className="border-l-2 border-ink pl-4">
+                <dt className="font-semibold">{title}</dt>
+                <dd className="mt-1 text-text-dim">{text}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
     </>
