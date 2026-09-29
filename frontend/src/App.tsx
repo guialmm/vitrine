@@ -4,8 +4,10 @@ import { RouterProvider, createBrowserRouter } from "react-router";
 import { Layout } from "./components/Layout";
 import { AuthProvider } from "./features/auth/AuthProvider";
 import { ApiError } from "./lib/api";
+import { CatalogPage } from "./pages/CatalogPage";
 import { HomePage } from "./pages/HomePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { ProductPage } from "./pages/ProductPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +24,8 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: "cafes", element: <CatalogPage /> },
+      { path: "cafes/:slug", element: <ProductPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

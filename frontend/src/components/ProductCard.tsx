@@ -19,18 +19,14 @@ export function ProductCard({ product }: { product: Product }) {
           </span>
         )}
       </div>
-      <div className="mt-3 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-semibold leading-tight group-hover:underline group-hover:underline-offset-4">
-            {product.name}
-          </h3>
-          <p className="mt-0.5 text-sm text-text-dim">{product.origin}</p>
-        </div>
-        <p className={`shrink-0 font-semibold ${soldOut ? "text-text-muted line-through" : ""}`}>
-          {brl(product.price_cents)}
-        </p>
-      </div>
-      <p className="mt-1 text-sm text-text-muted">{product.tasting_notes}</p>
+      <h3 className="mt-3 font-semibold leading-tight group-hover:underline group-hover:underline-offset-4">
+        {product.name}
+      </h3>
+      <p className="mt-0.5 text-sm text-text-dim">{product.origin}</p>
+      <p className="mt-0.5 hidden text-sm text-text-muted sm:block">{product.tasting_notes}</p>
+      <p className={`mt-2 font-semibold ${soldOut ? "text-text-muted line-through" : ""}`}>
+        {brl(product.price_cents)}
+      </p>
     </Link>
   );
 }

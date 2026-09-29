@@ -11,3 +11,9 @@ export const ROAST_LABEL: Record<string, string> = {
   "media-escura": "Torra média-escura",
   escura: "Torra escura",
 };
+
+/** "Torra média-escura" -> "Média-escura", for compact filter chips. */
+export const roastShort = (roast: string) => {
+  const s = (ROAST_LABEL[roast] ?? roast).replace(/^Torra /, "");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
