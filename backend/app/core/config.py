@@ -1,7 +1,10 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEV_JWT_SECRET = "dev-only-secret-not-for-production-use"
 
 
 class Settings(BaseSettings):
@@ -13,7 +16,7 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
 
     # Auth
-    jwt_secret: str = "dev-secret-change-me"
+    jwt_secret: str = DEV_JWT_SECRET
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 14
@@ -34,6 +37,12 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_tls: bool = False
     mail_from: str = "Vitrine <no-reply@vitrine.dev>"
+
+    @model_validator(mode="after")
+    def _require_real_secret_in_prod(self) -> "Settings":
+        if self.env == "prod" and (self.jwt_secret == DEV_JWT_SECRET or len(self.jwt_secret) < 32):
+            raise ValueError("JWT_SECRET must be set to 32+ random characters in production")
+        return self
 
     @property
     def secure_cookies(self) -> bool:
