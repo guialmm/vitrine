@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, field_validator
 
 from app.models import OrderStatus
 
@@ -52,4 +52,4 @@ class OrderOut(BaseModel):
 
 class AdminOrderOut(OrderOut):
     user_id: uuid.UUID
-    customer_email: str
+    customer_email: str = Field(validation_alias=AliasPath("user", "email"))
