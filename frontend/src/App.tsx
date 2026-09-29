@@ -3,6 +3,7 @@ import { RouterProvider, createBrowserRouter } from "react-router";
 
 import { Layout } from "./components/Layout";
 import { AuthProvider } from "./features/auth/AuthProvider";
+import { RequireAuth } from "./features/auth/RequireAuth";
 import { CartProvider } from "./features/cart/CartProvider";
 import { ApiError } from "./lib/api";
 import {
@@ -17,6 +18,7 @@ import { CartPage } from "./pages/CartPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { HomePage } from "./pages/HomePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { OrderPage, OrdersPage } from "./pages/OrdersPages";
 import { ProductPage } from "./pages/ProductPage";
 
 const queryClient = new QueryClient({
@@ -43,6 +45,8 @@ const router = createBrowserRouter([
       { path: "verificar-email", element: <VerifyEmailPage /> },
       { path: "esqueci-senha", element: <ForgotPasswordPage /> },
       { path: "redefinir-senha", element: <ResetPasswordPage /> },
+      { path: "pedidos", element: <RequireAuth><OrdersPage /></RequireAuth> },
+      { path: "pedidos/:id", element: <RequireAuth><OrderPage /></RequireAuth> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
