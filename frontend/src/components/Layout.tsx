@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router";
 
 import { useAuth } from "../features/auth/AuthProvider";
 import { CartButton } from "../features/cart/components";
@@ -20,6 +20,9 @@ const navLink = ({ isActive }: { isActive: boolean }) =>
 function AccountMenu() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+  // Close on navigation and when the signed-in user changes (logout → login).
+  useEffect(() => setOpen(false), [pathname, user?.id]);
   if (!user) {
     return (
       <Link to="/login" className={buttonClass("outline", "py-2")}>

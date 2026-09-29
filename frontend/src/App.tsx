@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider, createBrowserRouter } from "react-router";
+import { Navigate, RouterProvider, createBrowserRouter } from "react-router";
 
 import { Layout } from "./components/Layout";
 import { AuthProvider } from "./features/auth/AuthProvider";
@@ -18,6 +18,10 @@ import { CartPage } from "./pages/CartPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { HomePage } from "./pages/HomePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { AdminLayout } from "./pages/admin/AdminLayout";
+import { AdminOrdersPage } from "./pages/admin/AdminOrdersPage";
+import { AdminProductFormPage, AdminProductsPage } from "./pages/admin/AdminProductsPage";
+import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { OrderPage, OrdersPage } from "./pages/OrdersPages";
 import { ProductPage } from "./pages/ProductPage";
 
@@ -47,6 +51,29 @@ const router = createBrowserRouter([
       { path: "redefinir-senha", element: <ResetPasswordPage /> },
       { path: "pedidos", element: <RequireAuth><OrdersPage /></RequireAuth> },
       { path: "pedidos/:id", element: <RequireAuth><OrderPage /></RequireAuth> },
+      {
+        path: "admin",
+        element: (
+          <RequireAuth roles={["staff", "admin"]}>
+            <AdminLayout />
+          </RequireAuth>
+        ),
+        children: [
+          { index: true, element: <Navigate to="pedidos" replace /> },
+          { path: "pedidos", element: <AdminOrdersPage /> },
+          { path: "produtos", element: <AdminProductsPage /> },
+          { path: "produtos/novo", element: <AdminProductFormPage /> },
+          { path: "produtos/:id", element: <AdminProductFormPage /> },
+          {
+            path: "usuarios",
+            element: (
+              <RequireAuth roles={["admin"]}>
+                <AdminUsersPage />
+              </RequireAuth>
+            ),
+          },
+        ],
+      },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
