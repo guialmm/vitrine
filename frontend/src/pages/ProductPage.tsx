@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router";
 
 import { ProductCard } from "../components/ProductCard";
 import { ProductPhoto } from "../components/ProductPhoto";
+import { AddToCart } from "../features/cart/components";
 import { ApiError, api } from "../lib/api";
 import { ROAST_LABEL, brl } from "../lib/format";
 import type { Page, Product } from "../lib/types";
@@ -17,7 +18,7 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ProductPage({ buySlot }: { buySlot?: (product: Product) => React.ReactNode }) {
+export function ProductPage() {
   const { slug = "" } = useParams();
   const { data: product, error, isPending } = useQuery({
     queryKey: ["product", slug],
@@ -76,7 +77,7 @@ export function ProductPage({ buySlot }: { buySlot?: (product: Product) => React
                 Esgotado no momento. Esse lote volta na próxima safra.
               </p>
             ) : (
-              buySlot?.(product)
+              <AddToCart product={product} />
             )}
             {!soldOut && product.stock <= 10 && (
               <p className="mt-3 text-sm text-accent">Últimas {product.stock} unidades deste lote.</p>

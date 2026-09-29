@@ -3,7 +3,9 @@ import { RouterProvider, createBrowserRouter } from "react-router";
 
 import { Layout } from "./components/Layout";
 import { AuthProvider } from "./features/auth/AuthProvider";
+import { CartProvider } from "./features/cart/CartProvider";
 import { ApiError } from "./lib/api";
+import { CartPage } from "./pages/CartPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { HomePage } from "./pages/HomePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -26,6 +28,7 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "cafes", element: <CatalogPage /> },
       { path: "cafes/:slug", element: <ProductPage /> },
+      { path: "carrinho", element: <CartPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
@@ -35,7 +38,9 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <CartProvider>
+          <RouterProvider router={router} />
+        </CartProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

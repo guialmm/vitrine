@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router";
 
 import { useAuth } from "../features/auth/AuthProvider";
+import { CartButton } from "../features/cart/components";
 import { api } from "../lib/api";
 import { buttonClass } from "./ui";
 
@@ -80,7 +81,7 @@ function VerifyBanner() {
   );
 }
 
-export function Layout({ cartSlot }: { cartSlot?: React.ReactNode }) {
+export function Layout() {
   return (
     <div className="flex min-h-screen flex-col">
       <p className="bg-ink px-4 py-2 text-center text-xs text-bg/80">
@@ -95,7 +96,7 @@ export function Layout({ cartSlot }: { cartSlot?: React.ReactNode }) {
             </NavLink>
           </div>
           <div className="flex items-center gap-3">
-            {cartSlot}
+            <CartButton />
             <AccountMenu />
           </div>
         </nav>
