@@ -4,6 +4,13 @@ os.environ.setdefault(
     "DATABASE_URL", "postgresql+asyncpg://vitrine:vitrine@localhost:5432/vitrine_test"
 )
 os.environ["ENV"] = "test"
+os.environ["STRIPE_WEBHOOK_SECRET"] = "whsec_test_secret"
+
+import hashlib  # noqa: E402
+import hmac  # noqa: E402
+import json  # noqa: E402
+import time  # noqa: E402
+import uuid  # noqa: E402
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
@@ -12,6 +19,7 @@ from sqlalchemy import text  # noqa: E402
 from app.core.db import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Role, User  # noqa: E402
+from app.payments.gateway import CheckoutSession  # noqa: E402
 
 
 class FakeMailer:
@@ -26,6 +34,25 @@ class FakeMailer:
 
     def token_from(self, template: str) -> str:
         return self.last(template)["url"].split("token=")[1]
+
+
+class FakeGateway:
+    def __init__(self):
+        self.created: list = []
+        self.expired: list[str] = []
+        self.fail = False
+        self.completed: set[str] = set()  # sessions the "customer" already paid
+
+    async def create_checkout(self, order, user):
+        if self.fail:
+            raise RuntimeError("stripe is down")
+        self.created.append(order)
+        sid = f"cs_test_{len(self.created)}"
+        return CheckoutSession(id=sid, url=f"https://checkout.stripe.test/{sid}")
+
+    async def expire_checkout(self, session_id):
+        self.expired.append(session_id)
+        return session_id not in self.completed
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -53,7 +80,14 @@ def mailer() -> FakeMailer:
 
 
 @pytest.fixture
-async def client(mailer):
+def gateway() -> FakeGateway:
+    fake = FakeGateway()
+    app.state.gateway = fake
+    return fake
+
+
+@pytest.fixture
+async def client(mailer, gateway):
     async with AsyncClient(transport=ASGITransport(app), base_url="http://test") as c:
         yield c
 
@@ -82,3 +116,15 @@ async def create_user(
 
 def bearer(login: dict) -> dict:
     return {"Authorization": f"Bearer {login['access_token']}"}
+
+
+def stripe_event(event_type: str, obj: dict, event_id: str | None = None) -> tuple[bytes, dict]:
+    """Builds a webhook body signed exactly like Stripe does (t=..,v1=HMAC-SHA256)."""
+    payload = json.dumps(
+        {"id": event_id or f"evt_{uuid.uuid4().hex}", "type": event_type, "data": {"object": obj}}
+    ).encode()
+    ts = int(time.time())
+    sig = hmac.new(
+        os.environ["STRIPE_WEBHOOK_SECRET"].encode(), f"{ts}.".encode() + payload, hashlib.sha256
+    ).hexdigest()
+    return payload, {"Stripe-Signature": f"t={ts},v1={sig}", "Content-Type": "application/json"}

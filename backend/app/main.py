@@ -10,18 +10,23 @@ from app.auth.router import router as auth_router
 from app.catalog.router import router as catalog_router
 from app.core.config import settings
 from app.emails.mailer import ArqMailer
+from app.orders.router import router as orders_router
+from app.payments.gateway import StripeGateway
+from app.payments.webhooks import router as webhooks_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Tests install their own mailer before startup; don't replace it.
+    # Tests install fakes on app.state before startup; only fill in what's missing.
+    if not hasattr(app.state, "gateway"):
+        app.state.gateway = StripeGateway(settings.stripe_secret_key)
+    redis = None
     if not hasattr(app.state, "mailer"):
         redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
         app.state.mailer = ArqMailer(redis)
-        yield
+    yield
+    if redis:
         await redis.aclose()
-    else:
-        yield
 
 
 app = FastAPI(title="Vitrine API", version="0.1.0", lifespan=lifespan)
@@ -37,6 +42,8 @@ app.add_middleware(
 api = APIRouter(prefix="/api")
 api.include_router(auth_router)
 api.include_router(catalog_router)
+api.include_router(orders_router)
+api.include_router(webhooks_router)
 api.include_router(admin_router)
 
 

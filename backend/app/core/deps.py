@@ -10,6 +10,7 @@ from app.core.db import get_session
 from app.core.security import decode_token
 from app.emails.mailer import Mailer
 from app.models import Role, User
+from app.payments.gateway import PaymentGateway
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
@@ -72,3 +73,10 @@ def get_mailer(request: Request) -> Mailer:
 
 
 MailerDep = Annotated[Mailer, Depends(get_mailer)]
+
+
+def get_gateway(request: Request) -> PaymentGateway:
+    return request.app.state.gateway
+
+
+GatewayDep = Annotated[PaymentGateway, Depends(get_gateway)]
