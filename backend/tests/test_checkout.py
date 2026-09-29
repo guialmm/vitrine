@@ -202,3 +202,37 @@ async def test_customers_only_see_their_own_orders(client, gateway, products):
     assert (await client.get("/api/orders", headers=bearer(bia))).json() == []
     assert (await client.get(f"/api/orders/{order_id}", headers=bearer(ana))).status_code == 200
     assert (await client.get(f"/api/orders/{order_id}", headers=bearer(bia))).status_code == 404
+
+
+# ---------- cancel on return from Stripe ----------
+
+async def test_customer_backing_out_of_stripe_releases_stock(client, gateway, products):
+    login = await create_user(client)
+    order_id = (await paid_order(client, gateway, login))["order_id"]
+    assert await stock("catuai") == 8
+
+    r = await client.post(f"/api/orders/{order_id}/cancel", headers=bearer(login))
+    assert r.json()["status"] == "expired"
+    assert await stock("catuai") == 10
+    assert gateway.expired == ["cs_test_1"]
+
+    # Retrying is harmless: no double release.
+    await client.post(f"/api/orders/{order_id}/cancel", headers=bearer(login))
+    assert await stock("catuai") == 10
+
+
+async def test_cannot_cancel_an_order_already_paid_on_stripe(client, gateway, products):
+    login = await create_user(client)
+    order_id = (await paid_order(client, gateway, login))["order_id"]
+    gateway.completed.add("cs_test_1")
+    r = await client.post(f"/api/orders/{order_id}/cancel", headers=bearer(login))
+    assert r.status_code == 409
+    assert await stock("catuai") == 8
+
+
+async def test_cannot_cancel_someone_elses_order(client, gateway, products):
+    ana = await create_user(client, "ana@example.com")
+    bia = await create_user(client, "bia@example.com")
+    order_id = (await paid_order(client, gateway, ana))["order_id"]
+    r = await client.post(f"/api/orders/{order_id}/cancel", headers=bearer(bia))
+    assert r.status_code == 404

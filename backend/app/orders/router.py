@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
 from app.core.deps import CurrentUser, GatewayDep, SessionDep, VerifiedUser
-from app.models import Order
+from app.models import Order, OrderStatus
 from app.orders import service
 from app.orders.schemas import CheckoutIn, CheckoutOut, OrderOut
 
@@ -59,4 +59,24 @@ async def get_order(order_id: uuid.UUID, user: CurrentUser, session: SessionDep)
     # 404 rather than 403 for other people's orders: don't confirm they exist.
     if order is None or order.user_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    return order
+
+
+@router.post("/orders/{order_id}/cancel", response_model=OrderOut)
+async def cancel_pending_order(
+    order_id: uuid.UUID, user: CurrentUser, session: SessionDep, gateway: GatewayDep
+):
+    """Called when the customer backs out of Stripe Checkout: frees the reserved
+    stock now instead of holding it until the reservation times out."""
+    order = await session.get(Order, order_id)
+    if order is None or order.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    if order.status != OrderStatus.pending:
+        return order  # already paid/expired: nothing to undo, idempotent for retries
+    if order.stripe_session_id and not await gateway.expire_checkout(order.stripe_session_id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Order was already paid")
+    order = await service.lock_order(session, order_id)
+    await service.expire_order(session, order)
+    await session.commit()
+    await session.refresh(order)
     return order
