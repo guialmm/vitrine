@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: vitrine
+      POSTGRES_PASSWORD: vitrine
+      POSTGRES_DB: vitrine
+    ports: ["5432:5432"]
+    volumes: [pg_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vitrine"]
+      interval: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # web inbox: http://localhost:8025
+
+volumes:
+  pg_data:
