@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Navigate, RouterProvider, createBrowserRouter } from "react-router";
+import { Navigate, Outlet, RouterProvider, createBrowserRouter } from "react-router";
 
 import { Layout } from "./components/Layout";
 import { AuthProvider } from "./features/auth/AuthProvider";
@@ -18,10 +18,6 @@ import { CartPage } from "./pages/CartPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { HomePage } from "./pages/HomePage";
 import { NotFoundPage } from "./pages/NotFoundPage";
-import { AdminLayout } from "./pages/admin/AdminLayout";
-import { AdminOrdersPage } from "./pages/admin/AdminOrdersPage";
-import { AdminProductFormPage, AdminProductsPage } from "./pages/admin/AdminProductsPage";
-import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { OrderPage, OrdersPage } from "./pages/OrdersPages";
 import { ProductPage } from "./pages/ProductPage";
 
@@ -55,22 +51,33 @@ const router = createBrowserRouter([
         path: "admin",
         element: (
           <RequireAuth roles={["staff", "admin"]}>
-            <AdminLayout />
+            <Outlet />
           </RequireAuth>
         ),
         children: [
-          { index: true, element: <Navigate to="pedidos" replace /> },
-          { path: "pedidos", element: <AdminOrdersPage /> },
-          { path: "produtos", element: <AdminProductsPage /> },
-          { path: "produtos/novo", element: <AdminProductFormPage /> },
-          { path: "produtos/:id", element: <AdminProductFormPage /> },
           {
-            path: "usuarios",
-            element: (
-              <RequireAuth roles={["admin"]}>
-                <AdminUsersPage />
-              </RequireAuth>
-            ),
+            // Back-office code is split out: only staff ever download it.
+            lazy: async () => ({ Component: (await import("./pages/admin/AdminLayout")).AdminLayout }),
+            children: [
+              { index: true, element: <Navigate to="pedidos" replace /> },
+              { path: "pedidos", lazy: async () => ({ Component: (await import("./pages/admin/AdminOrdersPage")).AdminOrdersPage }) },
+              { path: "produtos", lazy: async () => ({ Component: (await import("./pages/admin/AdminProductsPage")).AdminProductsPage }) },
+              { path: "produtos/novo", lazy: async () => ({ Component: (await import("./pages/admin/AdminProductsPage")).AdminProductFormPage }) },
+              { path: "produtos/:id", lazy: async () => ({ Component: (await import("./pages/admin/AdminProductsPage")).AdminProductFormPage }) },
+              {
+                path: "usuarios",
+                lazy: async () => {
+                  const { AdminUsersPage } = await import("./pages/admin/AdminUsersPage");
+                  return {
+                    Component: () => (
+                      <RequireAuth roles={["admin"]}>
+                        <AdminUsersPage />
+                      </RequireAuth>
+                    ),
+                  };
+                },
+              },
+            ],
           },
         ],
       },

@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { Link } from "react-router";
 
@@ -68,22 +67,14 @@ export function AddToCart({ product }: { product: Product }) {
           Adicionar ao carrinho
         </Button>
       </div>
-      <AnimatePresence>
-        {added && (
-          <motion.p
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            role="status"
-            className="mt-3 text-sm text-ok"
-          >
-            Adicionado.{" "}
-            <Link to="/carrinho" className="font-semibold underline">
-              Ver carrinho
-            </Link>
-          </motion.p>
-        )}
-      </AnimatePresence>
+      {added && (
+        <p role="status" className="animate-fade-in mt-3 text-sm text-ok">
+          Adicionado.{" "}
+          <Link to="/carrinho" className="font-semibold underline">
+            Ver carrinho
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
@@ -100,18 +91,14 @@ export function CartButton() {
         <path d="M5 7h14l-1.2 11.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 7Z" strokeLinejoin="round" />
         <path d="M9 10V6a3 3 0 0 1 6 0v4" strokeLinecap="round" />
       </svg>
-      <AnimatePresence>
-        {count > 0 && (
-          <motion.span
-            key={count}
-            initial={{ scale: 0.5 }}
-            animate={{ scale: 1 }}
-            className="absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-accent px-1 text-[11px] font-bold text-bg"
-          >
-            {count}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      {count > 0 && (
+        <span
+          key={count} // remount on change so the pop animation replays
+          className="animate-pop absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-accent px-1 text-[11px] font-bold text-bg"
+        >
+          {count}
+        </span>
+      )}
     </Link>
   );
 }

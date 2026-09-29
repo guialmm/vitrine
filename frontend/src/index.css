@@ -32,8 +32,20 @@
   --color-roast-media-escura: #6b3a1f;
   --color-roast-escura: #2f1d12;
 
+  --animate-pop: pop 0.25s ease-out;
+  --animate-fade-in: fade-in 0.2s ease-out;
+
   --font-sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@keyframes pop {
+  from { transform: scale(0.5); }
+  to { transform: scale(1); }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
 }
 
 html,
