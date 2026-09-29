@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     env: Literal["dev", "test", "prod"] = "dev"
     database_url: str = "postgresql+asyncpg://vitrine:vitrine@localhost:5432/vitrine"
     redis_url: str = "redis://localhost:6379"
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "http://localhost:5174"
 
     # Auth
     jwt_secret: str = DEV_JWT_SECRET

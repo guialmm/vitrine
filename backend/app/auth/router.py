@@ -56,7 +56,7 @@ async def _send_verification(mailer: MailerDep, user: User) -> None:
     await mailer.send(
         "verify_email",
         user.email,
-        {"name": user.full_name, "url": f"{settings.frontend_url}/verify-email?token={token}"},
+        {"name": user.full_name, "url": f"{settings.frontend_url}/verificar-email?token={token}"},
     )
 
 
@@ -153,7 +153,7 @@ async def forgot_password(data: EmailIn, session: SessionDep, mailer: MailerDep)
         await mailer.send(
             "reset_password",
             user.email,
-            {"name": user.full_name, "url": f"{settings.frontend_url}/reset-password?token={token}"},
+            {"name": user.full_name, "url": f"{settings.frontend_url}/redefinir-senha?token={token}"},
         )
 
 

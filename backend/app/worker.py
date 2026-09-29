@@ -40,7 +40,7 @@ async def order_email_context(order_id: str) -> dict:
             }
             for i in order.items
         ],
-        "url": f"{settings.frontend_url}/orders/{order.id}",
+        "url": f"{settings.frontend_url}/pedidos/{order.id}",
     }
 
 

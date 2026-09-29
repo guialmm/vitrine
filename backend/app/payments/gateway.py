@@ -47,8 +47,8 @@ class StripeGateway:
                 ],
                 "shipping_address_collection": {"allowed_countries": ["BR"]},
                 "expires_at": int(order.expires_at.timestamp()),
-                "success_url": f"{settings.frontend_url}/orders/{order.id}?checkout=success",
-                "cancel_url": f"{settings.frontend_url}/cart?checkout=cancelled",
+                "success_url": f"{settings.frontend_url}/pedidos/{order.id}?checkout=sucesso",
+                "cancel_url": f"{settings.frontend_url}/carrinho?checkout=cancelado",
             },
             # Retrying the same order never creates a second session.
             options={"idempotency_key": f"checkout-{order.id}"},
