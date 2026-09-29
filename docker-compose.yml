@@ -1,3 +1,20 @@
+# Infra only (for local development with hot reload):
+#   docker compose up -d db redis mailpit
+# Whole stack (what a reviewer runs):
+#   docker compose --profile app up --build
+#   -> store on http://localhost:8080, inbox on http://localhost:8025
+
+x-backend-env: &backend-env
+  ENV: dev
+  DATABASE_URL: postgresql+asyncpg://vitrine:vitrine@db:5432/vitrine
+  REDIS_URL: redis://redis:6379
+  SMTP_HOST: mailpit
+  SMTP_PORT: 1025
+  FRONTEND_URL: ${APP_URL:-http://localhost:8080}
+  JWT_SECRET: ${JWT_SECRET:-dev-only-secret-not-for-production-use}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+
 services:
   db:
     image: postgres:17-alpine
@@ -20,7 +37,30 @@ services:
     image: axllent/mailpit:latest
     ports:
       - "1025:1025"  # SMTP
-      - "8025:8025"  # web inbox: http://localhost:8025
+      - "8025:8025"  # web inbox
+
+  api:
+    profiles: [app]
+    build: ./backend
+    environment: *backend-env
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+
+  worker:
+    profiles: [app]
+    build: ./backend
+    command: ["arq", "app.worker.WorkerSettings"]
+    environment: *backend-env
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+
+  web:
+    profiles: [app]
+    build: ./frontend
+    ports: ["8080:80"]
+    depends_on: [api]
 
 volumes:
   pg_data:
