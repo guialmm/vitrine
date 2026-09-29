@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% from "_macros.html" import button %}
+{% block content %}
+<h1 style="font-size:22px;margin:0 0 12px;color:#fff;">Confirme seu e-mail</h1>
+<p>Oi, {{ name }}! Falta só confirmar que este e-mail é seu para liberar as compras.</p>
+<p style="margin:24px 0;">{{ button(url, "Confirmar e-mail") }}</p>
+<p style="font-size:13px;color:#94a3b8;">O link vale por 24 horas. Se você não criou uma conta na Vitrine, ignore esta mensagem.</p>
+{% endblock %}

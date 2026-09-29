@@ -1,0 +1,7 @@
+Oi, {{ name }}! Pagamento do pedido #{{ short_id }} confirmado.
+
+{% for item in items %}{{ item.quantity }}x {{ item.product_name }} — {{ item.subtotal | brl }}
+{% endfor %}
+Total: {{ total_cents | brl }}
+
+Acompanhe em: {{ url }}

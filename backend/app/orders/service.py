@@ -16,7 +16,9 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.db import SessionLocal
 from app.models import Order, OrderItem, OrderStatus, Product, User
+from app.payments.gateway import PaymentGateway
 
 log = logging.getLogger(__name__)
 
@@ -133,3 +135,32 @@ async def mark_paid(session: AsyncSession, order: Order, checkout: dict) -> bool
     details = checkout.get("collected_information") or {}
     order.shipping = details.get("shipping_details") or checkout.get("shipping_details")
     return True
+
+
+async def expire_stale_orders(gateway: PaymentGateway, grace: timedelta) -> int:
+    """Safety net for lost `checkout.session.expired` webhooks: release stock of
+    pending orders whose reservation ran out. Returns how many were expired."""
+    cutoff = datetime.now(UTC) - grace
+    async with SessionLocal() as session:
+        stale = (
+            await session.execute(
+                select(Order.id, Order.stripe_session_id).where(
+                    Order.status == OrderStatus.pending, Order.expires_at < cutoff
+                )
+            )
+        ).all()
+
+    expired = 0
+    for order_id, stripe_session_id in stale:
+        # Close the Stripe session first so it can't be paid after we free the stock.
+        # If the customer already paid, leave it: the `completed` webhook will arrive.
+        if stripe_session_id and not await gateway.expire_checkout(stripe_session_id):
+            continue
+        async with SessionLocal() as session:
+            order = await lock_order(session, order_id)
+            if order and await expire_order(session, order):
+                await session.commit()
+                expired += 1
+    if expired:
+        log.info("Expired %d stale orders", expired)
+    return expired
