@@ -1,7 +1,9 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import model_validator
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEV_JWT_SECRET = "dev-only-secret-not-for-production-use"
@@ -35,8 +37,29 @@ class Settings(BaseSettings):
     smtp_port: int = 1025
     smtp_user: str | None = None
     smtp_password: str | None = None
-    smtp_tls: bool = False
+    smtp_tls: bool = False  # STARTTLS (e.g. Brevo on port 587)
     mail_from: str = "Vitrine <no-reply@vitrine.dev>"
+
+    # Deployment
+    # Free hosting tiers charge for a separate worker process; this runs the
+    # arq worker inside the API process instead. Docker keeps them separate.
+    run_worker_inline: bool = False
+    # Shared login shown on the public demo. It never receives email, so no
+    # visitor can trigger a password reset that locks the others out.
+    demo_email: str = "demo@example.com"
+
+    @field_validator("database_url")
+    @classmethod
+    def _asyncpg_url(cls, url: str) -> str:
+        """Accept the plain URLs hosts hand out (Neon, Render, Heroku):
+        postgres://…?sslmode=require&channel_binding=require → asyncpg form."""
+        parts = urlsplit(url)
+        scheme = "postgresql+asyncpg" if parts.scheme in ("postgres", "postgresql") else parts.scheme
+        query = dict(parse_qsl(parts.query))
+        if (mode := query.pop("sslmode", None)) and mode != "disable":
+            query["ssl"] = "require"
+        query.pop("channel_binding", None)  # libpq-only option
+        return urlunsplit((scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
     @model_validator(mode="after")
     def _require_real_secret_in_prod(self) -> "Settings":

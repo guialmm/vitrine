@@ -1,13 +1,16 @@
 """Demo data. Safe to run repeatedly: rows are upserted by slug/email.
 
-    python -m app.seed
+    python -m app.seed             # (re)apply demo catalog and users
+    python -m app.seed --if-empty  # only on a fresh database (runs on every deploy)
 """
 
 import asyncio
 import os
+import sys
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
+from app.core.config import settings
 from app.core.db import SessionLocal
 from app.core.security import hash_password
 from app.models import Category, Product, Role, User
@@ -64,20 +67,36 @@ async def seed() -> None:
             product.description, product.category_id = desc, cats[cat].id
             s.add(product)
 
-        email = os.environ.get("ADMIN_EMAIL", "admin@vitrine.dev")
-        admin = await s.scalar(select(User).where(User.email == email))
-        if admin is None:
-            s.add(User(
-                email=email,
-                # Dev default only; set ADMIN_PASSWORD for any shared deployment.
-                password_hash=hash_password(os.environ.get("ADMIN_PASSWORD", "vitrine-admin")),
-                full_name="Admin Vitrine",
-                role=Role.admin,
-                is_verified=True,
-            ))
+        admin_email = os.environ.get("ADMIN_EMAIL", "admin@vitrine.dev")
+        admin_password = os.environ.get("ADMIN_PASSWORD", "vitrine-admin")  # dev default
+        if settings.env == "prod" and admin_password == "vitrine-admin":
+            raise SystemExit("Set ADMIN_PASSWORD before seeding a production database")
+        demo_password = os.environ.get("DEMO_PASSWORD", "vitrine-demo")
+
+        for email, password, name, role in [
+            (admin_email, admin_password, "Admin Vitrine", Role.admin),
+            (settings.demo_email, demo_password, "Cliente Demo", Role.customer),
+        ]:
+            if await s.scalar(select(User).where(User.email == email)) is None:
+                s.add(User(
+                    email=email,
+                    password_hash=hash_password(password),
+                    full_name=name,
+                    role=role,
+                    is_verified=True,
+                ))
         await s.commit()
-    print(f"Seeded {len(CATEGORIES)} categories, {len(PRODUCTS)} products, admin {email}")
+    print(f"Seeded {len(CATEGORIES)} categories, {len(PRODUCTS)} products, admin {admin_email}")
+
+
+async def main(if_empty: bool) -> None:
+    if if_empty:
+        async with SessionLocal() as s:
+            if await s.scalar(select(func.count()).select_from(Product)):
+                print("Database already has products; skipping seed")
+                return
+    await seed()
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    asyncio.run(main("--if-empty" in sys.argv))

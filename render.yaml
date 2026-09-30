@@ -1,0 +1,45 @@
+# Render Blueprint: New → Blueprint → pick this repo.
+# Values marked `sync: false` are secrets you type in the Render dashboard;
+# they are never stored in the repository.
+services:
+  - type: web
+    name: vitrine-api
+    runtime: docker
+    rootDir: backend
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENV
+        value: prod
+      # Free plan has no background workers: run the arq worker in-process.
+      - key: RUN_WORKER_INLINE
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL # Neon connection string
+        sync: false
+      - key: REDIS_URL # Upstash, rediss://...
+        sync: false
+      - key: FRONTEND_URL # https://<your-app>.vercel.app
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_TLS
+        value: "true"
+      - key: SMTP_USER # Brevo SMTP login
+        sync: false
+      - key: SMTP_PASSWORD # Brevo SMTP key
+        sync: false
+      - key: MAIL_FROM # Vitrine <sender verified in Brevo>
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

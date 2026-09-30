@@ -179,12 +179,14 @@ novo cadastrado no painel já ganha um pacote com o próprio rótulo.
 ```bash
 cp .env.example .env    # opcional: coloque suas chaves de teste do Stripe
 docker compose --profile app up --build
-docker compose exec api python -m app.seed   # cafés + usuário admin
 ```
+
+Na primeira subida o banco é populado sozinho (cafés, admin e conta demo).
 
 - Loja: http://localhost:8080
 - Caixa de e-mails (Mailpit): http://localhost:8025
 - Admin de demonstração: `admin@vitrine.dev` / `vitrine-admin` (só em dev)
+- Cliente demo (já verificado): `demo@example.com` / `vitrine-demo`
 
 Pra testar o pagamento, use chaves **de teste** do Stripe no `.env` e
 encaminhe os webhooks com o [Stripe CLI](https://docs.stripe.com/stripe-cli):
@@ -214,10 +216,31 @@ npm install && npm run dev                            # http://localhost:5174
 O Vite faz proxy de `/api` pra `localhost:8001`; o webhook fica em
 `localhost:8001/api/webhooks/stripe`.
 
+## Deploy
+
+Tudo em planos gratuitos:
+
+| Peça | Serviço | Observação |
+|---|---|---|
+| API + worker | Render (Docker) | `render.yaml` (Blueprint); o worker roda dentro da API (`RUN_WORKER_INLINE`), já que *background worker* é pago |
+| Postgres | Neon | a URL `postgresql://…?sslmode=require` é convertida sozinha pro formato do asyncpg |
+| Redis | Upstash | `rediss://` (TLS) |
+| Front | Vercel | `frontend/vercel.json` faz rewrite de `/api/*` pro Render: navegador vê uma origem só, o cookie do refresh continua first-party |
+| E-mail | Brevo (SMTP) | sem domínio próprio, enviando de um remetente verificado |
+
+Na subida o container roda as migrations e o seed **só se o banco estiver vazio**
+(`python -m app.seed --if-empty`); em produção ele se recusa a criar o admin com a
+senha padrão. A conta demo usa um endereço `example.com` e nunca recebe e-mail,
+então nenhum visitante consegue disparar um reset que tire os outros da conta.
+
+O plano grátis do Render hiberna após 15 min sem acesso: a primeira visita pode
+levar ~30 s pra acordar a API. Webhooks do Stripe que chegarem nesse intervalo
+são reenviados por ele automaticamente.
+
 ## Testes
 
 ```bash
-cd backend && .venv/bin/pytest        # 56 testes, Postgres real (banco vitrine_test)
+cd backend && .venv/bin/pytest        # 61 testes, Postgres real (banco vitrine_test)
 cd frontend && npm test               # 8 testes (Vitest)
 ```
 

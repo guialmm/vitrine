@@ -7,6 +7,10 @@ import { Alert, Button, Field, Spinner, buttonClass } from "../components/ui";
 import { useAuth } from "../features/auth/AuthProvider";
 import { ApiError, api } from "../lib/api";
 
+// Set only on the public demo build (see frontend/.env.example).
+const DEMO_EMAIL = import.meta.env.VITE_DEMO_EMAIL as string | undefined;
+const DEMO_PASSWORD = import.meta.env.VITE_DEMO_PASSWORD as string | undefined;
+
 /** Only same-site paths, so `?next=` can't be abused as an open redirect. */
 function safeNext(next: string | null) {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
@@ -35,7 +39,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const mutation = useMutation({
-    mutationFn: () => login(email, password),
+    mutationFn: (c: { email: string; password: string }) => login(c.email, c.password),
     onSuccess: () => navigate(next, { replace: true }),
   });
 
@@ -43,8 +47,10 @@ export function LoginPage() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    mutation.mutate();
+    mutation.mutate({ email, password });
   };
+
+  const demo = DEMO_EMAIL && DEMO_PASSWORD ? { email: DEMO_EMAIL, password: DEMO_PASSWORD } : null;
 
   return (
     <AuthCard
@@ -58,6 +64,22 @@ export function LoginPage() {
         </>
       }
     >
+      {demo && (
+        <div className="mb-6 rounded-md border border-border-strong bg-bg-elev p-4 text-sm">
+          <p className="font-semibold">Só quer testar a loja?</p>
+          <p className="mt-1 text-text-dim">
+            Use a conta demo — já verificada. No pagamento, cartão <span className="whitespace-nowrap font-mono">4242 4242 4242 4242</span>.
+          </p>
+          <Button
+            variant="outline"
+            className="mt-3 w-full"
+            onClick={() => mutation.mutate(demo)}
+            loading={mutation.isPending && mutation.variables?.email === demo.email}
+          >
+            Entrar com a conta demo
+          </Button>
+        </div>
+      )}
       <form onSubmit={submit} className="space-y-4">
         <Field label="E-mail">
           <input className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />

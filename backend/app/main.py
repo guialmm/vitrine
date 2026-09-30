@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from arq import create_pool
@@ -24,7 +25,18 @@ async def lifespan(app: FastAPI):
     if not hasattr(app.state, "mailer"):
         redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
         app.state.mailer = ArqMailer(redis)
+    worker = None
+    if settings.run_worker_inline:
+        from arq.worker import create_worker
+
+        from app.worker import WorkerSettings
+
+        worker = create_worker(WorkerSettings, handle_signals=False)
+        worker_task = asyncio.create_task(worker.async_run())
     yield
+    if worker:
+        await worker.close()
+        worker_task.cancel()
     if redis:
         await redis.aclose()
 

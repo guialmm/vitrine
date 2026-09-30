@@ -5,6 +5,8 @@ from typing import Literal, Protocol
 
 from arq.connections import ArqRedis
 
+from app.core.config import settings
+
 Template = Literal["verify_email", "reset_password", "order_confirmation"]
 
 
@@ -17,4 +19,6 @@ class ArqMailer:
         self.redis = redis
 
     async def send(self, template: Template, to: str, context: dict) -> None:
+        if to.lower() == settings.demo_email.lower():
+            return  # shared demo account: never mail it (see Settings.demo_email)
         await self.redis.enqueue_job("send_email", template, to, context)

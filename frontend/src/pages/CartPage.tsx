@@ -192,7 +192,8 @@ export function CartPage() {
               {user ? "Ir para o pagamento" : "Entrar para finalizar"}
             </Button>
             <p className="mt-3 text-center text-xs text-text-muted">
-              Pagamento processado pelo Stripe. Em modo de teste, use o cartão 4242 4242 4242 4242.
+              Pagamento processado pelo Stripe em modo de teste: use o cartão 4242 4242 4242 4242 e um
+              endereço fictício — nada é cobrado nem enviado.
             </p>
           </div>
         </aside>
