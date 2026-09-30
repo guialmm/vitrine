@@ -2,6 +2,12 @@
 
 [![CI](https://github.com/guialmm/vitrine/actions/workflows/ci.yml/badge.svg)](https://github.com/guialmm/vitrine/actions/workflows/ci.yml)
 
+**[Demo ao vivo](https://vitrine-phi-nine.vercel.app)** — na tela de login, clique em
+**"Entrar com a conta demo"** e pague com o cartão de teste `4242 4242 4242 4242`
+(qualquer validade futura e CVC; use um endereço fictício). O Stripe está em modo de
+teste: nada é cobrado. O backend grátis pode levar ~30 s pra acordar na primeira
+visita (ver [Deploy](#deploy)).
+
 E-commerce full-stack de uma torrefação fictícia de cafés especiais: catálogo,
 carrinho, **pagamento com Stripe**, **autenticação com JWT e refresh token
 rotativo**, **autorização por papéis** (cliente / equipe / admin) e **e-mails
