@@ -7,7 +7,7 @@ services:
     runtime: docker
     rootDir: backend
     plan: free
-    region: oregon
+    region: ohio # same AWS region as Neon (us-east-2)
     healthCheckPath: /api/health
     envVars:
       - key: ENV
