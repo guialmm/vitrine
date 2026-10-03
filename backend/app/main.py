@@ -10,6 +10,7 @@ from app.admin.router import router as admin_router
 from app.auth.router import router as auth_router
 from app.catalog.router import router as catalog_router
 from app.core.config import settings
+from app.core.ratelimit import RedisLimiter
 from app.emails.mailer import ArqMailer
 from app.orders.router import router as orders_router
 from app.payments.gateway import StripeGateway
@@ -22,9 +23,12 @@ async def lifespan(app: FastAPI):
     if not hasattr(app.state, "gateway"):
         app.state.gateway = StripeGateway(settings.stripe_secret_key)
     redis = None
-    if not hasattr(app.state, "mailer"):
+    if not (hasattr(app.state, "mailer") and hasattr(app.state, "limiter")):
         redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
-        app.state.mailer = ArqMailer(redis)
+        if not hasattr(app.state, "mailer"):
+            app.state.mailer = ArqMailer(redis)
+        if not hasattr(app.state, "limiter"):
+            app.state.limiter = RedisLimiter(redis)
     worker = None
     if settings.run_worker_inline:
         from arq.worker import create_worker

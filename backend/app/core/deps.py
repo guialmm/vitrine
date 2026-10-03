@@ -7,6 +7,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_session
+from app.core.ratelimit import Limiter
 from app.core.security import decode_token
 from app.emails.mailer import Mailer
 from app.models import Role, User
@@ -80,3 +81,20 @@ def get_gateway(request: Request) -> PaymentGateway:
 
 
 GatewayDep = Annotated[PaymentGateway, Depends(get_gateway)]
+
+
+def get_limiter(request: Request) -> Limiter:
+    return request.app.state.limiter
+
+
+LimiterDep = Annotated[Limiter, Depends(get_limiter)]
+
+
+def client_ip(request: Request) -> str:
+    # uvicorn's --proxy-headers resolves X-Forwarded-For into request.client.
+    # Vercel overwrites that header, but a client calling the API host directly
+    # can forge it: per-IP limits are best-effort, per-account limits are not.
+    return request.client.host if request.client else "unknown"
+
+
+ClientIP = Annotated[str, Depends(client_ip)]

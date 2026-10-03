@@ -23,8 +23,12 @@ jobs:
           --health-cmd "pg_isready -U vitrine"
           --health-interval 3s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
     env:
       DATABASE_URL: postgresql+asyncpg://vitrine:vitrine@localhost:5432/vitrine_test
+      REDIS_TEST_URL: redis://localhost:6379/15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

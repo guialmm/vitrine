@@ -19,6 +19,7 @@ from sqlalchemy import text  # noqa: E402
 from app.core.db import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Role, User  # noqa: E402
+from app.core.ratelimit import MemoryLimiter  # noqa: E402
 from app.payments.gateway import CheckoutSession  # noqa: E402
 
 
@@ -87,7 +88,14 @@ def gateway() -> FakeGateway:
 
 
 @pytest.fixture
-async def client(mailer, gateway):
+def limiter() -> MemoryLimiter:
+    fake = MemoryLimiter()
+    app.state.limiter = fake
+    return fake
+
+
+@pytest.fixture
+async def client(mailer, gateway, limiter):
     async with AsyncClient(transport=ASGITransport(app), base_url="http://test") as c:
         yield c
 

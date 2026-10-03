@@ -27,6 +27,10 @@ function AuthCard({ title, subtitle, children }: { title: string; subtitle?: Rea
 }
 
 function errorText(err: unknown, map: Record<number, string> = {}) {
+  if (err instanceof ApiError && err.status === 429) {
+    const minutes = err.message.match(/(\d+) min/)?.[1];
+    return `Muitas tentativas. Tente de novo em ${minutes ? `${minutes} min` : "alguns minutos"}.`;
+  }
   if (err instanceof ApiError) return map[err.status] ?? err.message;
   return "Algo deu errado. Tente novamente.";
 }

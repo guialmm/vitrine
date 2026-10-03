@@ -17,8 +17,9 @@ from app.auth.schemas import (
     TokenOut,
     UserOut,
 )
+from app.core import ratelimit as rl
 from app.core.config import settings
-from app.core.deps import CurrentUser, MailerDep, SessionDep
+from app.core.deps import ClientIP, CurrentUser, LimiterDep, MailerDep, SessionDep
 from app.core.security import (
     create_access_token,
     create_email_token,
@@ -65,7 +66,11 @@ def _normalize(email: str) -> str:
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def register(data: RegisterIn, session: SessionDep, mailer: MailerDep):
+async def register(
+    data: RegisterIn, session: SessionDep, mailer: MailerDep, limiter: LimiterDep, ip: ClientIP
+):
+    if wait := await limiter.hit(rl.REGISTER_PER_IP, ip):
+        raise rl.too_many(wait)
     user = User(
         email=_normalize(data.email),
         password_hash=hash_password(data.password),
@@ -81,12 +86,23 @@ async def register(data: RegisterIn, session: SessionDep, mailer: MailerDep):
 
 
 @router.post("/login", response_model=TokenOut)
-async def login(data: LoginIn, response: Response, session: SessionDep):
-    user = await session.scalar(
-        select(User).where(func.lower(User.email) == _normalize(data.email))
-    )
+async def login(
+    data: LoginIn, response: Response, session: SessionDep, limiter: LimiterDep, ip: ClientIP
+):
+    email = _normalize(data.email)
+    # Per-IP stops spraying one password across many accounts; per-account stops
+    # guessing one account's password from many IPs. Checked before the hash
+    # so a locked account doesn't even cost an argon2 verification.
+    if wait := await limiter.hit(rl.LOGIN_ATTEMPTS_PER_IP, ip):
+        raise rl.too_many(wait)
+    if wait := await limiter.blocked_for(rl.LOGIN_FAILURES_PER_EMAIL, email):
+        raise rl.too_many(wait)
+
+    user = await session.scalar(select(User).where(func.lower(User.email) == email))
     if not verify_password(data.password, user.password_hash if user else None):
+        await limiter.hit(rl.LOGIN_FAILURES_PER_EMAIL, email)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
+    await limiter.reset(rl.LOGIN_FAILURES_PER_EMAIL, email)
 
     raw = await service.issue_refresh_token(session, user)
     await session.commit()
@@ -137,17 +153,24 @@ async def verify_email(data: TokenIn, session: SessionDep):
 
 
 @router.post("/resend-verification", status_code=status.HTTP_202_ACCEPTED)
-async def resend_verification(user: CurrentUser, mailer: MailerDep):
+async def resend_verification(user: CurrentUser, mailer: MailerDep, limiter: LimiterDep):
+    if wait := await limiter.hit(rl.RESEND_PER_USER, str(user.id)):
+        raise rl.too_many(wait)
     if not user.is_verified:
         await _send_verification(mailer, user)
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
-async def forgot_password(data: EmailIn, session: SessionDep, mailer: MailerDep):
+async def forgot_password(
+    data: EmailIn, session: SessionDep, mailer: MailerDep, limiter: LimiterDep, ip: ClientIP
+):
+    email = _normalize(data.email)
+    # Limits apply to any submitted address, so a 429 doesn't reveal whether it exists.
+    for limit, key in ((rl.RESET_PER_IP, ip), (rl.RESET_PER_EMAIL, email)):
+        if wait := await limiter.hit(limit, key):
+            raise rl.too_many(wait)
     # Always 202, whether or not the account exists, to avoid leaking who is registered.
-    user = await session.scalar(
-        select(User).where(func.lower(User.email) == _normalize(data.email))
-    )
+    user = await session.scalar(select(User).where(func.lower(User.email) == email))
     if user:
         token = create_email_token(user, "reset")
         await mailer.send(
