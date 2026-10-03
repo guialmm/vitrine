@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.admin.router import router as admin_router
@@ -46,6 +46,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Vitrine API", version="0.1.0", lifespan=lifespan)
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    if request.url.path.startswith("/api/auth/"):
+        # Responses carry access tokens: never let a browser or proxy cache them.
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,

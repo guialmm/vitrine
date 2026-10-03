@@ -144,3 +144,11 @@ async def test_reset_password_flow(client, mailer):
     new = await client.post("/api/auth/login", json={"email": "ana@example.com", "password": "nova-s3nha"})
     assert old.status_code == 401
     assert new.status_code == 200
+
+
+async def test_auth_responses_are_not_cacheable(client):
+    await create_user(client)
+    r = await client.post("/api/auth/refresh")
+    assert r.headers["cache-control"] == "no-store"
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert "no-store" not in (await client.get("/api/products")).headers.get("cache-control", "")
