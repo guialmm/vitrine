@@ -21,7 +21,7 @@ from app.payments.webhooks import router as webhooks_router
 async def lifespan(app: FastAPI):
     # Tests install fakes on app.state before startup; only fill in what's missing.
     if not hasattr(app.state, "gateway"):
-        app.state.gateway = StripeGateway(settings.stripe_secret_key)
+        app.state.gateway = StripeGateway(settings.stripe_secret_key, settings.stripe_api_base)
     redis = None
     if not (hasattr(app.state, "mailer") and hasattr(app.state, "limiter")):
         redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))

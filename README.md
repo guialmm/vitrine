@@ -246,9 +246,22 @@ são reenviados por ele automaticamente.
 ## Testes
 
 ```bash
-cd backend && .venv/bin/pytest        # 61 testes, Postgres real (banco vitrine_test)
+cd backend && .venv/bin/pytest        # 69 testes, Postgres real (banco vitrine_test)
 cd frontend && npm test               # 8 testes (Vitest)
+
+# ponta a ponta: stack inteira no Docker, Stripe trocado pelo stripe-mock oficial
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile app up -d --build
+cd frontend && npm run e2e            # Playwright
 ```
+
+O teste de ponta a ponta faz a jornada inteira de um cliente novo num navegador
+de verdade: cadastro, link de confirmação lido do Mailpit, filtro do catálogo,
+carrinho, checkout, desistência na página do Stripe (estoque devolvido), webhook
+assinado de pagamento, pedido pago, e um admin marcando o pedido como enviado.
+Ele já pegou dois bugs que os testes unitários não viam: o nginx guardava o IP
+antigo da API depois de um restart do container, e a página de confirmação de
+e-mail verificava antes de a sessão ser restaurada (o aviso "confirme seu e-mail"
+continuava na tela).
 
 Os testes do backend rodam contra um Postgres de verdade (não SQLite), porque
 o que está sendo testado depende dele: locks, `RETURNING`, `ON CONFLICT`,
@@ -271,8 +284,12 @@ Alguns dos cenários cobertos:
 - equipe não gerencia papéis; admin não rebaixa a si mesmo
 - no front: 401s simultâneos disparam **uma** renovação de token
 
-O CI roda tudo isso a cada push, mais `alembic upgrade head && downgrade base`
-pra garantir que as migrations vão e voltam.
+Também: login travado depois de 5 senhas erradas (nem a senha certa entra
+durante o bloqueio), limite por IP, e "esqueci minha senha" limitado sem revelar
+se o e-mail existe.
+
+O CI roda tudo isso a cada push (inclusive o e2e), mais
+`alembic upgrade head && downgrade base` pra garantir que as migrations vão e voltam.
 
 ## Estrutura
 

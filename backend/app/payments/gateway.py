@@ -23,8 +23,12 @@ class PaymentGateway(Protocol):
 
 
 class StripeGateway:
-    def __init__(self, api_key: str):
-        self.client = stripe.StripeClient(api_key, http_client=stripe.HTTPXClient())
+    def __init__(self, api_key: str, api_base: str | None = None):
+        self.client = stripe.StripeClient(
+            api_key,
+            http_client=stripe.HTTPXClient(),
+            base_addresses={"api": api_base} if api_base else None,
+        )
 
     async def create_checkout(self, order: Order, user: User) -> CheckoutSession:
         session = await self.client.v1.checkout.sessions.create_async(

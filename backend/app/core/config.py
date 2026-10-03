@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     # Stripe
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    # Only for end-to-end tests: point the SDK at stripe-mock instead of api.stripe.com.
+    stripe_api_base: str | None = None
     currency: str = "brl"
     # Stripe requires Checkout Sessions to live at least 30 minutes.
     reservation_minutes: int = 30

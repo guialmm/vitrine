@@ -1,0 +1,19 @@
+# End-to-end test stack: the real app with Stripe replaced by stripe-mock.
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile app up -d --build
+#   cd frontend && npm run e2e
+x-e2e-env: &e2e-env
+  STRIPE_API_BASE: http://stripe-mock:12111
+  STRIPE_SECRET_KEY: sk_test_e2e
+  STRIPE_WEBHOOK_SECRET: whsec_e2e_test_secret
+
+services:
+  stripe-mock:
+    image: stripe/stripe-mock:latest
+    profiles: [app]
+
+  api:
+    environment: *e2e-env
+    depends_on: [stripe-mock]
+
+  worker:
+    environment: *e2e-env

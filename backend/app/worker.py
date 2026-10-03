@@ -60,7 +60,7 @@ async def expire_stale(ctx: dict) -> int:
 
 
 async def startup(ctx: dict) -> None:
-    ctx["gateway"] = StripeGateway(settings.stripe_secret_key)
+    ctx["gateway"] = StripeGateway(settings.stripe_secret_key, settings.stripe_api_base)
 
 
 class WorkerSettings:
