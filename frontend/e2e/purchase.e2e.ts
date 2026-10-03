@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { linkFromEmail, sendStripeEvent } from "./helpers";
+import { emailSubjects, linkFromEmail, sendStripeEvent } from "./helpers";
 
 // One full customer journey on the real stack; only Stripe's hosted page is faked.
 test("new customer signs up, confirms email, pays, and staff ships the order", async ({ page, request }) => {
@@ -95,5 +95,14 @@ test("new customer signs up, confirms email, pays, and staff ships the order", a
   const row = page.getByRole("row", { name: new RegExp(orderId.slice(0, 8), "i") });
   await row.getByRole("button", { name: "Marcar como enviado" }).click();
   await page.getByRole("button", { name: "Enviados" }).click();
-  await expect(page.getByRole("row", { name: new RegExp(orderId.slice(0, 8), "i") })).toContainText("Enviado");
+  const shipped = page.getByRole("row", { name: new RegExp(orderId.slice(0, 8), "i") });
+  await expect(shipped).toContainText("Enviado");
+  await expect.poll(() => emailSubjects(request, email)).toContain(`Pedido #${orderId.slice(0, 8)} enviado`);
+
+  // 9. Admin refunds it: two clicks, the second one showing the amount.
+  await shipped.getByRole("button", { name: "Reembolsar" }).click();
+  await shipped.getByRole("button", { name: "Reembolsar R$ 78,00?" }).click();
+  await page.getByRole("button", { name: "Reembolsados" }).click();
+  await expect(page.getByRole("row", { name: new RegExp(orderId.slice(0, 8), "i") })).toContainText("Reembolsado");
+  await expect.poll(() => emailSubjects(request, email)).toContain(`Reembolso do pedido #${orderId.slice(0, 8)}`);
 });

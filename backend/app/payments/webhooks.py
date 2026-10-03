@@ -18,6 +18,8 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 PAID_EVENTS = {"checkout.session.completed", "checkout.session.async_payment_succeeded"}
 EXPIRED_EVENTS = {"checkout.session.expired", "checkout.session.async_payment_failed"}
+# Refunds issued from the Stripe dashboard (ours from the admin panel also echo here).
+REFUNDED_EVENT = "charge.refunded"
 
 
 @router.post("/stripe", include_in_schema=False)
@@ -48,7 +50,11 @@ async def stripe_webhook(
     if first_time is None:
         return {"status": "duplicate"}
 
-    checkout = event["data"]["object"]
+    obj = event["data"]["object"]
+    if event["type"] == REFUNDED_EVENT:
+        return await _handle_refund(session, mailer, obj)
+
+    checkout = obj
     order_id = (checkout.get("metadata") or {}).get("order_id")
     order = await service.lock_order(session, uuid.UUID(order_id)) if order_id else None
 
@@ -67,4 +73,24 @@ async def stripe_webhook(
         # After commit: never announce a payment that could still roll back.
         email = await session.scalar(select(User.email).where(User.id == order.user_id))
         await mailer.send("order_confirmation", email, {"order_id": str(order.id)})
+    return {"status": "ok"}
+
+
+async def _handle_refund(session, mailer, charge: dict) -> dict:
+    order = await session.scalar(
+        select(Order)
+        .where(Order.stripe_payment_intent == charge.get("payment_intent"))
+        .with_for_update()
+    )
+    newly = False
+    if order is None:
+        log.info("Refund for unknown payment %s", charge.get("payment_intent"))
+    elif not charge.get("refunded"):
+        log.warning("Partial refund on order %s: left for manual review", order.id)
+    else:
+        newly = await service.apply_refund(session, order)
+    await session.commit()
+    if newly:
+        email = await session.scalar(select(User.email).where(User.id == order.user_id))
+        await mailer.send("order_refunded", email, {"order_id": str(order.id)})
     return {"status": "ok"}

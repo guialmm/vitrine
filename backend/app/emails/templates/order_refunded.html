@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% from "_macros.html" import button %}
+{% block content %}
+<h1 style="font-size:22px;margin:0 0 12px;color:#1d1712;">Reembolso confirmado</h1>
+<p>Oi, {{ name }}. Reembolsamos <strong style="color:#1d1712;">{{ total_cents | brl }}</strong> referentes ao pedido <strong style="color:#1d1712;">#{{ short_id }}</strong>.</p>
+<p style="font-size:13px;color:#5c5249;">O valor volta para o mesmo cartão usado na compra. Dependendo do banco, pode levar de 5 a 10 dias úteis para aparecer na fatura.</p>
+<p style="margin:24px 0;">{{ button(url, "Ver pedido") }}</p>
+{% endblock %}

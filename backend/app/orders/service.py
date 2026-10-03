@@ -1,7 +1,9 @@
 """Order lifecycle.
 
     pending ──(Stripe: paid)──▶ paid ──(staff)──▶ shipped
-       │
+       │                          │                   │
+       │                          └──(admin refund)───┴──▶ refunded
+       │                               (stock released only if not shipped)
        └──(Stripe: expired / reservation timeout)──▶ expired   (stock released)
 
 Stock is reserved when the order is created, not when it is paid, so two
@@ -103,6 +105,21 @@ async def expire_order(session: AsyncSession, order: Order) -> bool:
         return False
     await _release(session, order)
     order.status = OrderStatus.expired
+    return True
+
+
+REFUNDABLE = (OrderStatus.paid, OrderStatus.shipped)
+
+
+async def apply_refund(session: AsyncSession, order: Order) -> bool:
+    """paid/shipped → refunded. Stock goes back only if the bags never left.
+    Returns False if the order was already refunded (or never paid)."""
+    if order.status not in REFUNDABLE:
+        return False
+    if order.status == OrderStatus.paid:
+        await _release(session, order)
+    order.status = OrderStatus.refunded
+    order.refunded_at = datetime.now(UTC)
     return True
 
 

@@ -43,6 +43,8 @@ class FakeGateway:
         self.expired: list[str] = []
         self.fail = False
         self.completed: set[str] = set()  # sessions the "customer" already paid
+        self.refunded: list[str] = []
+        self.refuse_refunds = False
 
     async def create_checkout(self, order, user):
         if self.fail:
@@ -50,6 +52,11 @@ class FakeGateway:
         self.created.append(order)
         sid = f"cs_test_{len(self.created)}"
         return CheckoutSession(id=sid, url=f"https://checkout.stripe.test/{sid}")
+
+    async def refund(self, order):
+        if self.refuse_refunds:
+            raise RuntimeError("charge already disputed")
+        self.refunded.append(order.stripe_payment_intent)
 
     async def expire_checkout(self, session_id):
         self.expired.append(session_id)

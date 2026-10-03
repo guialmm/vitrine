@@ -11,6 +11,8 @@ SUBJECTS: dict[Template, str] = {
     "verify_email": "Confirme seu e-mail na Vitrine",
     "reset_password": "Redefinição de senha",
     "order_confirmation": "Pedido #{short_id} confirmado",
+    "order_shipped": "Pedido #{short_id} enviado",
+    "order_refunded": "Reembolso do pedido #{short_id}",
 }
 
 

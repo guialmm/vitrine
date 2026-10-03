@@ -1,6 +1,7 @@
 """Back-office endpoints. Staff manage the catalog; only admins manage categories
 and user roles."""
 
+import logging
 import uuid
 from typing import Annotated
 
@@ -20,10 +21,13 @@ from app.catalog.schemas import (
     ProductPatch,
     Sort,
 )
-from app.core.deps import AdminUser, SessionDep, StaffUser
+from app.core.deps import AdminUser, GatewayDep, MailerDep, SessionDep, StaffUser
 from app.auth.schemas import UserOut
 from app.models import Category, Order, OrderStatus, Product, Role, User
+from app.orders import service
 from app.orders.schemas import AdminOrderOut
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -106,7 +110,7 @@ async def list_orders(
 
 
 @router.post("/orders/{order_id}/ship", response_model=AdminOrderOut)
-async def ship_order(order_id: uuid.UUID, _: StaffUser, session: SessionDep):
+async def ship_order(order_id: uuid.UUID, _: StaffUser, session: SessionDep, mailer: MailerDep):
     order = await session.get(Order, order_id, options=[selectinload(Order.user)], with_for_update=True)
     if order is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
@@ -114,6 +118,36 @@ async def ship_order(order_id: uuid.UUID, _: StaffUser, session: SessionDep):
         raise HTTPException(status.HTTP_409_CONFLICT, f"Cannot ship a {order.status.value} order")
     order.status = OrderStatus.shipped
     await session.commit()
+    await mailer.send("order_shipped", order.user.email, {"order_id": str(order.id)})
+    return order
+
+
+@router.post("/orders/{order_id}/refund", response_model=AdminOrderOut)
+async def refund_order(
+    order_id: uuid.UUID, _: AdminUser, session: SessionDep, gateway: GatewayDep, mailer: MailerDep
+):
+    """Full refund through Stripe. Admin-only: it moves money, unlike shipping."""
+    order = await session.get(Order, order_id, options=[selectinload(Order.user)])
+    if order is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Order not found")
+    if order.status not in service.REFUNDABLE or not order.stripe_payment_intent:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Cannot refund a {order.status.value} order")
+
+    # Stripe first, outside the row lock (network call); the idempotency key makes
+    # a retry safe. The charge.refunded webhook may race us: apply_refund is a no-op
+    # for whichever side arrives second.
+    try:
+        await gateway.refund(order)
+    except Exception:
+        log.exception("Stripe refund failed for order %s", order.id)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Payment provider refused the refund") from None
+
+    order = await service.lock_order(session, order_id)
+    newly = await service.apply_refund(session, order)
+    await session.commit()
+    order = await session.get(Order, order_id, options=[selectinload(Order.user)], populate_existing=True)
+    if newly:
+        await mailer.send("order_refunded", order.user.email, {"order_id": str(order.id)})
     return order
 
 

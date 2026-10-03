@@ -28,6 +28,7 @@ class OrderStatus(str, enum.Enum):
     pending = "pending"  # stock reserved, waiting for Stripe
     paid = "paid"
     shipped = "shipped"
+    refunded = "refunded"  # money returned via Stripe; stock back only if not shipped
     cancelled = "cancelled"
     expired = "expired"  # checkout abandoned, stock released
 
@@ -117,6 +118,7 @@ class Order(TimestampMixin, Base):
     shipping: Mapped[dict | None] = mapped_column(JSONB)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    refunded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user: Mapped[User] = relationship(back_populates="orders")
     items: Mapped[list["OrderItem"]] = relationship(

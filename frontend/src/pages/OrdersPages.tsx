@@ -162,6 +162,11 @@ export function OrderPage() {
           <p className="mt-2">
             {order.paid_at ? `Aprovado em ${dateTime(order.paid_at)}` : order.status === "pending" ? "Aguardando" : "Não realizado"}
           </p>
+          {order.refunded_at && (
+            <p className="mt-1 text-text-dim">
+              Reembolsado em {dateTime(order.refunded_at)} — o valor volta para o mesmo cartão.
+            </p>
+          )}
         </div>
       </div>
     </div>

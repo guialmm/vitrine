@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { OrderStatusBadge } from "../../components/OrderStatusBadge";
 import { Alert, Button, Spinner } from "../../components/ui";
+import { useAuth } from "../../features/auth/AuthProvider";
 import { api } from "../../lib/api";
 import { brl, dateTime } from "../../lib/format";
 import type { AdminOrder, OrderStatus } from "../../lib/types";
@@ -11,6 +12,7 @@ const FILTERS: [OrderStatus | "", string][] = [
   ["", "Todos"],
   ["paid", "A enviar"],
   ["shipped", "Enviados"],
+  ["refunded", "Reembolsados"],
   ["pending", "Aguardando pagamento"],
   ["expired", "Não concluídos"],
 ];
@@ -22,10 +24,21 @@ export function AdminOrdersPage() {
     queryKey: ["admin", "orders", status],
     queryFn: () => api<AdminOrder[]>("/admin/orders", { params: { status, limit: 100 } }),
   });
+  const { user } = useAuth();
   const ship = useMutation({
     mutationFn: (id: string) => api<AdminOrder>(`/admin/orders/${id}/ship`, { method: "POST" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "orders"] }),
   });
+  // Refunds move money: two clicks, the second one showing the amount.
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const refund = useMutation({
+    mutationFn: (id: string) => api<AdminOrder>(`/admin/orders/${id}/refund`, { method: "POST" }),
+    onSettled: () => {
+      setConfirming(null);
+      queryClient.invalidateQueries({ queryKey: ["admin", "orders"] });
+    },
+  });
+  const canRefund = user?.role === "admin";
 
   return (
     <div>
@@ -44,9 +57,9 @@ export function AdminOrdersPage() {
         ))}
       </div>
 
-      {ship.error && (
+      {(ship.error || refund.error) && (
         <div className="mt-4">
-          <Alert>{ship.error.message}</Alert>
+          <Alert>{(ship.error ?? refund.error)?.message}</Alert>
         </div>
       )}
       {isPending && <Spinner className="mt-8 size-6 text-text-dim" />}
@@ -92,7 +105,7 @@ export function AdminOrdersPage() {
                   <td className="py-4 pl-6">
                     <OrderStatusBadge status={o.status} />
                   </td>
-                  <td className="py-4 text-right">
+                  <td className="space-y-2 py-4 text-right">
                     {o.status === "paid" && (
                       <Button
                         variant="outline"
@@ -101,6 +114,17 @@ export function AdminOrdersPage() {
                         onClick={() => ship.mutate(o.id)}
                       >
                         Marcar como enviado
+                      </Button>
+                    )}
+                    {canRefund && (o.status === "paid" || o.status === "shipped") && (
+                      <Button
+                        variant="danger"
+                        className="px-3 py-1.5 text-xs"
+                        loading={refund.isPending && refund.variables === o.id}
+                        onClick={() => (confirming === o.id ? refund.mutate(o.id) : setConfirming(o.id))}
+                        onBlur={() => setConfirming((c) => (c === o.id && !refund.isPending ? null : c))}
+                      >
+                        {confirming === o.id ? `Reembolsar ${brl(o.total_cents)}?` : "Reembolsar"}
                       </Button>
                     )}
                   </td>

@@ -1,0 +1,5 @@
+Oi, {{ name }}. Reembolsamos {{ total_cents | brl }} referentes ao pedido #{{ short_id }}.
+
+O valor volta para o mesmo cartão da compra (pode levar de 5 a 10 dias úteis).
+
+Detalhes: {{ url }}

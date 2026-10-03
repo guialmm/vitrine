@@ -48,6 +48,7 @@ class OrderOut(BaseModel):
     created_at: datetime
     expires_at: datetime
     paid_at: datetime | None
+    refunded_at: datetime | None
 
 
 class AdminOrderOut(OrderOut):

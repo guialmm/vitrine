@@ -48,7 +48,7 @@ export interface Page<T> {
   page_size: number;
 }
 
-export type OrderStatus = "pending" | "paid" | "shipped" | "cancelled" | "expired";
+export type OrderStatus = "pending" | "paid" | "shipped" | "refunded" | "cancelled" | "expired";
 
 export interface OrderItem {
   product_id: number;
@@ -70,6 +70,7 @@ export interface Order {
   created_at: string;
   expires_at: string;
   paid_at: string | null;
+  refunded_at: string | null;
 }
 
 export interface AdminOrder extends Order {

@@ -16,6 +16,10 @@ class CheckoutSession:
 class PaymentGateway(Protocol):
     async def create_checkout(self, order: Order, user: User) -> CheckoutSession: ...
 
+    async def refund(self, order: Order) -> None:
+        """Full refund of the order's payment. Raises if Stripe refuses."""
+        ...
+
     async def expire_checkout(self, session_id: str) -> bool:
         """Make sure the session can no longer be paid. Returns True if it is now
         expired, False if the customer already completed it."""
@@ -67,3 +71,10 @@ class StripeGateway:
             session = await self.client.v1.checkout.sessions.retrieve_async(session_id)
             return session.status == "expired"
         return True
+
+    async def refund(self, order: Order) -> None:
+        await self.client.v1.refunds.create_async(
+            params={"payment_intent": order.stripe_payment_intent},
+            # A double click (or a retry after a timeout) can't refund twice.
+            options={"idempotency_key": f"refund-{order.id}"},
+        )

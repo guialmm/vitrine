@@ -7,7 +7,9 @@ from arq.connections import ArqRedis
 
 from app.core.config import settings
 
-Template = Literal["verify_email", "reset_password", "order_confirmation"]
+Template = Literal[
+    "verify_email", "reset_password", "order_confirmation", "order_shipped", "order_refunded"
+]
 
 
 class Mailer(Protocol):

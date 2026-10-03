@@ -21,6 +21,11 @@ export async function linkFromEmail(request: APIRequestContext, to: string, subj
   throw new Error(`no "${subjectIncludes}" email for ${to}`);
 }
 
+export async function emailSubjects(request: APIRequestContext, to: string): Promise<string[]> {
+  const list = await (await request.get(`${MAILPIT}/api/v1/search?query=to:${encodeURIComponent(to)}`)).json();
+  return (list.messages ?? []).map((m: { Subject: string }) => m.Subject);
+}
+
 /** Sends a webhook signed exactly like Stripe's (t=<ts>,v1=HMAC-SHA256). */
 export async function sendStripeEvent(request: APIRequestContext, type: string, object: Record<string, unknown>) {
   const payload = JSON.stringify({ id: `evt_e2e_${Date.now()}_${Math.random()}`, type, data: { object } });

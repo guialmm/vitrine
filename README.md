@@ -52,9 +52,9 @@ confirmação do pagamento, e-mail de confirmação.
 **Conta** — cadastro, login, verificação de e-mail, "esqueci minha senha",
 sessão que sobrevive a um F5 sem guardar token no `localStorage`.
 
-**Painel** — pedidos por status e "marcar como enviado" (equipe), cadastro e
-edição de produtos com prévia do rótulo (equipe), gestão de papéis de usuário
-(só admin).
+**Painel** — pedidos por status e "marcar como enviado" (equipe, com e-mail pro
+cliente), reembolso pelo Stripe (só admin), cadastro e edição de produtos com
+prévia do rótulo (equipe), gestão de papéis de usuário (só admin).
 
 | | | |
 |---|---|---|
@@ -134,6 +134,14 @@ de novo; se o evento chegar repetido, é ignorado. Também são tratados:
 pagamento assíncrono (boleto chega como `completed` mas `unpaid`), valor pago
 diferente do total do pedido, e pagamento que chega depois da reserva expirar
 (tenta reservar de novo, tudo-ou-nada via savepoint).
+
+**Reembolso que não reembolsa duas vezes.** O botão do painel chama a API de
+reembolso do Stripe com uma chave de idempotência por pedido (clique duplo ou
+retry depois de timeout não geram um segundo reembolso). O webhook
+`charge.refunded` também aplica o reembolso, então devolver pelo painel do Stripe
+funciona igual; quem chegar por último (painel ou webhook) vira no-op. O estoque
+só volta se o pedido ainda não tinha sido enviado, e reembolso parcial fica pra
+revisão manual em vez de ser tratado como total.
 
 **Preço vem sempre do banco.** O front manda só `{product_id, quantity}`. O
 pedido guarda um *snapshot* de nome e preço de cada item, então editar o
@@ -246,7 +254,7 @@ são reenviados por ele automaticamente.
 ## Testes
 
 ```bash
-cd backend && .venv/bin/pytest        # 69 testes, Postgres real (banco vitrine_test)
+cd backend && .venv/bin/pytest        # 79 testes, Postgres real (banco vitrine_test)
 cd frontend && npm test               # 8 testes (Vitest)
 
 # ponta a ponta: stack inteira no Docker, Stripe trocado pelo stripe-mock oficial
@@ -257,7 +265,8 @@ cd frontend && npm run e2e            # Playwright
 O teste de ponta a ponta faz a jornada inteira de um cliente novo num navegador
 de verdade: cadastro, link de confirmação lido do Mailpit, filtro do catálogo,
 carrinho, checkout, desistência na página do Stripe (estoque devolvido), webhook
-assinado de pagamento, pedido pago, e um admin marcando o pedido como enviado.
+assinado de pagamento, pedido pago, e um admin marcando o pedido como enviado e
+reembolsando — conferindo cada e-mail que o cliente recebe.
 Ele já pegou dois bugs que os testes unitários não viam: o nginx guardava o IP
 antigo da API depois de um restart do container, e a página de confirmação de
 e-mail verificava antes de a sessão ser restaurada (o aviso "confirme seu e-mail"

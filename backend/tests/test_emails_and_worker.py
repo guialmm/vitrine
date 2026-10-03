@@ -101,3 +101,18 @@ async def test_orders_already_paid_on_stripe_are_left_for_the_webhook(client, ga
     assert await expire_stale_orders(gateway, grace=timedelta(minutes=5)) == 0
     assert await status(order_id) == OrderStatus.pending
     assert await stock() == 7
+
+
+@pytest.mark.parametrize(
+    "template,subject,snippet",
+    [
+        ("order_shipped", "enviado", "despachado"),
+        ("order_refunded", "Reembolso do pedido", "R$ 177,00"),
+    ],
+)
+async def test_shipped_and_refunded_emails_render(client, product, template, subject, snippet):
+    login = await create_user(client)
+    order_id = await make_order(client, login)
+    msg = render(template, await order_email_context(order_id))
+    assert subject in msg["Subject"]
+    assert snippet in list(msg.iter_parts())[1].get_content()

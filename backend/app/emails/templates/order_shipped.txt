@@ -1,0 +1,5 @@
+Oi, {{ name }}! O pedido #{{ short_id }} foi despachado.{% if city %} Destino: {{ city }}.{% endif %}
+
+{% for item in items %}{{ item.quantity }}x {{ item.product_name }}
+{% endfor %}
+Acompanhe em: {{ url }}

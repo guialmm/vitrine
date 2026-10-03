@@ -41,11 +41,12 @@ async def order_email_context(order_id: str) -> dict:
             for i in order.items
         ],
         "url": f"{settings.frontend_url}/pedidos/{order.id}",
+        "city": ((order.shipping or {}).get("address") or {}).get("city"),
     }
 
 
 async def send_email(ctx: dict, template: Template, to: str, context: dict) -> None:
-    if template == "order_confirmation":
+    if template.startswith("order_"):
         context = await order_email_context(context["order_id"])
     try:
         await deliver(to, template, context)

@@ -4,6 +4,7 @@ const STATUS: Record<OrderStatus, { label: string; className: string }> = {
   pending: { label: "Aguardando pagamento", className: "bg-accent-soft text-accent" },
   paid: { label: "Pago", className: "bg-ok/10 text-ok" },
   shipped: { label: "Enviado", className: "bg-ink text-bg" },
+  refunded: { label: "Reembolsado", className: "bg-surface-hover text-text-dim" },
   cancelled: { label: "Cancelado", className: "bg-surface-hover text-text-dim" },
   expired: { label: "Não concluído", className: "bg-surface-hover text-text-dim" },
 };
