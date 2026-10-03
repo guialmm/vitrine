@@ -236,3 +236,15 @@ async def test_cannot_cancel_someone_elses_order(client, gateway, products):
     order_id = (await paid_order(client, gateway, ana))["order_id"]
     r = await client.post(f"/api/orders/{order_id}/cancel", headers=bearer(bia))
     assert r.status_code == 404
+
+
+async def test_abandoned_checkouts_are_hidden_from_my_orders(client, gateway, products):
+    login = await create_user(client)
+    abandoned = (await paid_order(client, gateway, login))["order_id"]
+    await client.post(f"/api/orders/{abandoned}/cancel", headers=bearer(login))
+    kept = (await paid_order(client, gateway, login))["order_id"]
+
+    listed = [o["id"] for o in (await client.get("/api/orders", headers=bearer(login))).json()]
+    assert listed == [kept]
+    # Still reachable directly (e.g. from a bookmarked link).
+    assert (await client.get(f"/api/orders/{abandoned}", headers=bearer(login))).status_code == 200

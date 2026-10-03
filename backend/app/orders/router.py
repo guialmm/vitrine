@@ -47,8 +47,12 @@ async def checkout(data: CheckoutIn, user: VerifiedUser, session: SessionDep, ga
 
 @router.get("/orders", response_model=list[OrderOut])
 async def my_orders(user: CurrentUser, session: SessionDep):
+    # Abandoned checkouts are noise for the customer (staff still see them in
+    # the back-office); the order page itself stays reachable by id.
     rows = await session.scalars(
-        select(Order).where(Order.user_id == user.id).order_by(Order.created_at.desc())
+        select(Order)
+        .where(Order.user_id == user.id, Order.status != OrderStatus.expired)
+        .order_by(Order.created_at.desc())
     )
     return rows.all()
 
