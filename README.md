@@ -14,7 +14,9 @@ rotativo**, **autorização por papéis** (cliente / equipe / admin) e **e-mails
 transacionais** enviados por uma fila. FastAPI + PostgreSQL + Redis no backend,
 React + TypeScript + Tailwind no frontend, tudo sobe com um `docker compose`.
 
-![Home da loja](docs/screenshots/01-home.jpg)
+![Demo: login com a conta demo, catálogo, carrinho, pagamento no Stripe (modo teste) e pedido confirmado](docs/demo.gif)
+
+<sub>Gravado no ambiente local com o Stripe de verdade em modo de teste (o trecho do checkout está acelerado).</sub>
 
 ## Contexto
 
@@ -58,7 +60,8 @@ prévia do rótulo (equipe), gestão de papéis de usuário (só admin).
 
 | | | |
 |---|---|---|
-| ![Catálogo](docs/screenshots/02-catalogo.jpg) | ![Produto](docs/screenshots/03-produto.jpg) | ![Carrinho](docs/screenshots/04-carrinho.jpg) |
+| ![Home](docs/screenshots/01-home.jpg) | ![Catálogo](docs/screenshots/02-catalogo.jpg) | ![Produto](docs/screenshots/03-produto.jpg) |
+| ![Carrinho](docs/screenshots/04-carrinho.jpg) | ![Mobile](docs/screenshots/09-mobile-produto.jpg) | ![Meus pedidos](docs/screenshots/06-meus-pedidos.jpg) |
 | ![Pedido](docs/screenshots/05-pedido.jpg) | ![Painel: pedidos](docs/screenshots/07-admin-pedidos.jpg) | ![Painel: produto](docs/screenshots/08-admin-produto.jpg) |
 
 ## Arquitetura
