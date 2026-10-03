@@ -183,18 +183,20 @@ export function RegisterDonePage() {
 export function VerifyEmailPage() {
   const [params] = useSearchParams();
   const token = params.get("token") ?? "";
-  const { user, reloadUser } = useAuth();
+  const { user, ready, reloadUser } = useAuth();
   const mutation = useMutation({
     mutationFn: () => api("/auth/verify-email", { method: "POST", body: { token } }),
     onSuccess: () => user && reloadUser(),
   });
   const sent = useRef(false);
   useEffect(() => {
-    if (token && !sent.current) {
+    // Wait for the cookie-based session restore: links are opened in a fresh
+    // tab, and verifying first would leave the logged-in user's banner stale.
+    if (token && ready && !sent.current) {
       sent.current = true; // StrictMode runs effects twice in dev
       mutation.mutate();
     }
-  }, [token, mutation]);
+  }, [token, ready, mutation]);
 
   if (!token || mutation.isError) {
     return (
