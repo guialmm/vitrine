@@ -4,12 +4,16 @@ Counters live in Redis so they survive restarts and are shared by every API
 process. A window starts on the first hit and the key expires with it.
 """
 
+import logging
 import time
 from dataclasses import dataclass
 from typing import Protocol
 
 from fastapi import HTTPException, status
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -92,6 +96,31 @@ class MemoryLimiter:
 
     async def reset(self, limit: Limit, key: str) -> None:
         self.buckets.pop(_key(limit, key), None)
+
+
+class FallbackLimiter:
+    """Redis first; if a call fails, count in this process instead of failing the
+    request. Limits stay on (per instance) while Redis is unreachable."""
+
+    def __init__(self, primary: Limiter, fallback: Limiter | None = None):
+        self.primary = primary
+        self.fallback = fallback or MemoryLimiter()
+
+    async def _call(self, method: str, *args):
+        try:
+            return await getattr(self.primary, method)(*args)
+        except (RedisError, OSError) as e:
+            log.warning("rate limiter: Redis unavailable, counting in memory (%s)", e)
+            return await getattr(self.fallback, method)(*args)
+
+    async def hit(self, limit: Limit, key: str) -> int:
+        return await self._call("hit", limit, key)
+
+    async def blocked_for(self, limit: Limit, key: str) -> int:
+        return await self._call("blocked_for", limit, key)
+
+    async def reset(self, limit: Limit, key: str) -> None:
+        await self._call("reset", limit, key)
 
 
 def too_many(retry_after: int) -> HTTPException:
