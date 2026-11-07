@@ -173,6 +173,15 @@ as sessões abertas.
 dão a mesma resposta e levam o mesmo tempo (o hash é comparado com um hash
 fictício); "esqueci minha senha" responde 202 sempre.
 
+**Redis fora do ar não derruba a loja.** O Redis guarda a fila de e-mails e os
+contadores do limite de login, não dados da loja. Se ele não responde na subida,
+a API abre mesmo assim: o limite passa a contar na memória do processo, os
+e-mails saem direto (sem retry) e a liberação de pedidos abandonados roda num
+laço próprio. Se ele cai com a API no ar, cada chamada que falha usa os mesmos
+substitutos. Isso veio de um incidente real: o Upstash arquiva Redis grátis
+parado há 14 dias, e a API, que antes exigia o Redis para subir, ficou fora do ar
+até alguém notar.
+
 **Fotos reais com rótulo gerado.** As fotos são de pacotes kraft sem marca
 (Pexels). O rótulo de cada café é HTML gerado a partir dos dados do produto e
 projetado sobre a foto com uma **homografia** (`matrix3d` calculada a partir
@@ -254,6 +263,11 @@ O plano grátis do Render hiberna após 15 min sem acesso: a primeira visita pod
 levar ~30 s pra acordar a API. Webhooks do Stripe que chegarem nesse intervalo
 são reenviados por ele automaticamente.
 
+Toda segunda, o workflow [`manter-ativo`](.github/workflows/manter-ativo.yml)
+acorda a API, abre o catálogo e entra com a conta demo — passando pelo Postgres e
+pelo Redis, para nenhum plano grátis considerar o serviço abandonado. Se algum
+passo falha, o GitHub avisa por e-mail que a demo quebrou.
+
 ## Testes
 
 ```bash
@@ -299,6 +313,8 @@ Alguns dos cenários cobertos:
 Também: login travado depois de 5 senhas erradas (nem a senha certa entra
 durante o bloqueio), limite por IP, e "esqueci minha senha" limitado sem revelar
 se o e-mail existe.
+
+E a API subindo e atendendo com o Redis inalcançável (`test_sem_redis.py`).
 
 O CI roda tudo isso a cada push (inclusive o e2e), mais
 `alembic upgrade head && downgrade base` pra garantir que as migrations vão e voltam.
