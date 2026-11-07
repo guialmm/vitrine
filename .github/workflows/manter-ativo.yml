@@ -1,0 +1,25 @@
+# The free tiers sleep or delete idle services: Render spins the API down,
+# Upstash archives a Redis unused for 14 days. Once a week, wake the API and log
+# in with the public demo account, which touches Postgres and Redis (the login
+# rate limiter). A failure here is GitHub emailing that the live demo is broken.
+name: manter-ativo
+
+on:
+  schedule:
+    - cron: "0 12 * * 1" # Mondays, 09:00 in Brasília
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      API: https://vitrine-api-xsz6.onrender.com/api
+    steps:
+      - name: wake the API (cold start can take a minute)
+        run: timeout 300 bash -c 'until curl -sf "$API/health"; do sleep 10; done'
+      - name: catalog (Postgres)
+        run: curl -sf "$API/products" -o /dev/null
+      - name: demo login (Postgres + Redis)
+        run: |
+          curl -sf -X POST "$API/auth/login" -H 'Content-Type: application/json' \
+            -d '{"email":"demo@example.com","password":"vitrine-demo"}' -o /dev/null
