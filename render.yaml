@@ -27,17 +27,18 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      # Gmail SMTP with an app password (Brevo held messages from a gmail.com sender).
       - key: SMTP_HOST
-        value: smtp-relay.brevo.com
+        value: smtp.gmail.com
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_TLS
         value: "true"
-      - key: SMTP_USER # Brevo SMTP login
+      - key: SMTP_USER # the Gmail address
         sync: false
-      - key: SMTP_PASSWORD # Brevo SMTP key
+      - key: SMTP_PASSWORD # a Google app password
         sync: false
-      - key: MAIL_FROM # Vitrine <sender verified in Brevo>
+      - key: MAIL_FROM # Vitrine <the same Gmail address>
         sync: false
       - key: ADMIN_EMAIL
         sync: false
